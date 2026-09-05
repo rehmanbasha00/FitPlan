@@ -158,7 +158,7 @@ export default function Header() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-ink-soft">You're all caught up — no new notifications.</p>
+                <p className="mt-2 text-ink-soft">Youre all caught up — no new notifications.</p>
               )}
               <button className="focus-ring mt-2 text-xs font-medium text-accent" onClick={() => dispatch(closeMenus())}>
                 Close
