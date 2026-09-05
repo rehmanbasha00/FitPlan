@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { createSession, toPublicUser, verifyPassword, SESSION_COOKIE_NAME } from '@/lib/auth';
+export async function POST(request:NextRequest){const body=await request.json() as {email?:string;password?:string}; if(!body.email?.trim()||!body.password)return NextResponse.json({message:'Email and password are required'},{status:400}); const user=await prisma.user.findUnique({where:{email:body.email.toLowerCase()}}); if(!user||!verifyPassword(body.password,user.passwordHash,user.passwordSalt))return NextResponse.json({message:'Invalid email or password'},{status:401}); const sid=await createSession(user.id); const res=NextResponse.json({user:toPublicUser(user)}); res.cookies.set(SESSION_COOKIE_NAME,sid,{httpOnly:true,sameSite:'lax',path:'/',maxAge:604800,secure:process.env.NODE_ENV==='production'}); return res;}

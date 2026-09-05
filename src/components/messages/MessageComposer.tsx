@@ -1,0 +1,13 @@
+'use client';
+import { useRef, useState } from 'react';
+import Button from '@/components/ui/Button';
+import { getSocket } from '@/lib/socket';
+import { useAppDispatch } from '@/store/hooks';
+import { receiveMessage } from '@/store/slices/messageSlice';
+import { MessageKind } from '@/types';
+export default function MessageComposer({ conversationId, recipientUserId, onText }: { conversationId: string; recipientUserId?: string; onText: (text: string) => void }) {
+  const [text, setText] = useState(''); const fileRef = useRef<HTMLInputElement>(null); const dispatch = useAppDispatch();
+  const sendMedia = async (file: File) => { const form = new FormData(); form.append('file', file); const res = await fetch('/api/messages/upload', { method: 'POST', body: form }); if (!res.ok) return; const data = await res.json() as { url: string; kind: MessageKind; fileName: string }; const saved = await fetch('/api/messages/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId, kind: data.kind, mediaUrl: data.url, fileName: data.fileName }) }); if (!saved.ok) return; const msg = await saved.json(); dispatch(receiveMessage(msg)); getSocket()?.emit('message:send', msg); };
+  const shareLocation = () => navigator.geolocation?.getCurrentPosition((pos) => { const msg = { id: `local-${crypto.randomUUID()}`, conversationId, sender: 'me' as const, recipientUserId, kind: 'location' as const, latitude: pos.coords.latitude, longitude: pos.coords.longitude, text: 'Shared my location', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) }; dispatch(receiveMessage(msg)); getSocket()?.emit('message:send', msg); });
+  return <div className="border-t border-surface-shell p-2"><div className="mb-2 flex gap-1"><button type="button" onClick={() => fileRef.current?.click()} className="rounded-full bg-surface-muted px-3 py-1 text-xs">📷 Media</button><button type="button" onClick={shareLocation} className="rounded-full bg-surface-muted px-3 py-1 text-xs">📍 Location</button><span className="rounded-full bg-surface-muted px-3 py-1 text-xs">😊 Emoji</span><input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={(e) => e.target.files?.[0] && sendMedia(e.target.files[0])} /></div><form onSubmit={(e) => { e.preventDefault(); if (text.trim()) { onText(text.trim()); setText(''); } }} className="flex items-center gap-2"><input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message... 😊" className="focus-ring flex-1 rounded-full bg-surface-muted px-4 py-2.5 text-sm" /><Button type="submit" size="icon" disabled={!text.trim()}>➤</Button></form></div>;
+}
